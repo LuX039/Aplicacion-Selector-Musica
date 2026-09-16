@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vinyl Draw — Prototype</title>
+<style>
+:root{
+  --bg:#0B0B0D; --panel:#17171A; --text:#F5F5F2; --muted:#9B9994;
+  --green:#3ECF8E; --amber:#E8A33D; --line:#2A2A2E;
+  --danger:#d96b6b; --violet:#9B8CFF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh}
+.header{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;background:rgba(11,11,13,.9);backdrop-filter:blur(14px);z-index:10}
+.logo{font-weight:900;letter-spacing:-.04em;font-size:21px}
+.logo span{color:var(--green)}
+.header-right{display:flex;align-items:center;gap:12px}
+.avatar{width:34px;height:34px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+main{max-width:1120px;margin:auto;padding:44px 24px 70px}
+.screen{display:none}.screen.active{display:block}
+.eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:11px;color:var(--muted);font-weight:800}
+h1{font-size:clamp(34px,6vw,62px);line-height:.95;letter-spacing:-.055em;margin:9px 0 12px}
+h2{letter-spacing:-.035em;margin:0}
+.sub{color:var(--muted);max-width:620px;line-height:1.55}
+.search-wrap{position:relative;margin:30px 0 20px}
+.search{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;color:var(--text);padding:16px 18px;outline:none}
+.search:focus{border-color:#48484d}
+.suggestions{position:absolute;top:58px;left:0;right:0;background:#1d1d21;border:1px solid var(--line);border-radius:12px;overflow:hidden;z-index:5;box-shadow:0 20px 50px #0008}
+.suggestion{width:100%;display:flex;gap:13px;align-items:center;background:none;border:0;color:var(--text);padding:12px 14px;text-align:left}
+.suggestion:hover{background:#26262a}
+.mini-cover{width:44px;height:44px;border-radius:5px;display:grid;place-items:center;font-weight:900;flex:none}
+.meta{min-width:0}.meta strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta small{color:var(--muted)}
+.album-list{display:grid;gap:10px;margin-top:14px}
+.album-row{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:12px;display:flex;gap:14px;align-items:center}
+.cover{width:62px;height:62px;border-radius:7px;display:grid;place-items:center;font-size:24px;font-weight:950;letter-spacing:-.06em;flex:none}
+.row-info{flex:1;min-width:0}.row-info h3{margin:0 0 4px;font-size:16px}.row-info p{margin:0;color:var(--muted);font-size:13px}
+.rating{display:flex;align-items:center;gap:10px;min-width:210px}
+.rating input{accent-color:var(--green);width:120px}.rating-value{font-weight:800;width:28px;text-align:center}
+.icon-btn{border:0;background:transparent;color:var(--muted);font-size:22px;padding:8px}.icon-btn:hover{color:var(--text)}
+.bottom{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-top:26px}
+.help{font-size:12px;color:var(--muted)}
+.primary,.secondary,.mode{border:1px solid var(--line);border-radius:12px;padding:13px 18px;font-weight:800;background:var(--panel);color:var(--text)}
+.primary{background:var(--text);color:#0b0b0d;border-color:var(--text)}
+.primary:disabled{opacity:.35;cursor:not-allowed}
+.secondary:hover,.primary:hover:not(:disabled){transform:translateY(-1px)}
+.home-grid{display:grid;grid-template-columns:1fr 320px;gap:28px;align-items:stretch}
+.wheel{min-height:530px;border:1px solid var(--line);border-radius:22px;background:radial-gradient(circle at 50% 45%,#242428 0,#17171a 34%,#101012 72%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.wheel:before{content:"";position:absolute;width:330px;height:330px;border:1px solid #ffffff0d;border-radius:50%;box-shadow:0 0 0 45px #ffffff03,0 0 0 90px #ffffff02}
+.wheel-center{position:relative;text-align:center;z-index:1}
+.wheel-mark{width:156px;height:156px;border-radius:18px;margin:auto auto 20px;background:#0d0d0f;border:1px solid #ffffff18;display:grid;place-items:center;font-size:44px;font-weight:950;background-size:cover;background-position:center;box-shadow:0 20px 50px #0007;transition:transform .05s linear}
+.wheel h2{font-size:28px}.wheel p{color:var(--muted);margin:8px 0}
+.wheel.spinning{animation:pulse .8s ease-in-out infinite alternate}
+@keyframes pulse{to{filter:brightness(1.2)}}
+.modes{display:flex;flex-direction:column;gap:12px}
+.mode{text-align:left;padding:20px;transition:.18s}.mode:hover{transform:translateY(-2px)}
+.mode.green{border-color:#3ecf8e55}.mode.amber{border-color:#e8a33d55}.mode.violet{border-color:#9b8cff55}
+.mode b{display:block;font-size:16px;margin-bottom:6px}.mode span{font-size:12px;color:var(--muted);line-height:1.4}
+.surprise{margin-top:2px;width:100%}
+.sidebar{margin-top:28px;border-top:1px solid var(--line);padding-top:20px;display:flex;gap:8px}
+.stat{font-size:12px;color:var(--muted);padding:9px 12px;border:1px solid var(--line);border-radius:9px}
+.profile-genres{margin-top:22px}
+.genre-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:12px;color:var(--muted)}
+.genre-row .g-name{width:150px;flex:none;color:var(--text)}
+.genre-row .bar-track{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.genre-row .bar-fill{height:100%;background:var(--green);border-radius:3px}
+.genre-row .pct{width:36px;text-align:right;font-weight:800;color:var(--text)}
+.cov-link{display:inline-block;margin-top:12px;font-size:12px;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+.cov-link:hover{color:var(--text)}
+.result{max-width:940px;margin:auto}
+.result-card{display:grid;grid-template-columns:minmax(320px,500px) 1fr;gap:42px;align-items:center}
+.big-cover{aspect-ratio:1;border-radius:16px;display:grid;place-items:center;font-size:100px;font-weight:950;letter-spacing:-.09em;box-shadow:0 25px 70px #0008}
+.badge{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:#ffffff08;font-size:12px;font-weight:800;margin-bottom:18px}
+.badge.green{color:var(--green)}.badge.amber{color:var(--amber)}.badge.violet{color:var(--violet)}
+.result h1{font-size:clamp(40px,5vw,68px);margin:0 0 8px}
+.result .artist{font-size:20px;color:var(--muted);margin-bottom:7px}.details{font-size:13px;color:var(--muted)}
+.reason{margin:26px 0;padding:17px 18px;background:var(--panel);border-left:2px solid var(--green);border-radius:0 10px 10px 0;line-height:1.5}
+.result-actions{display:flex;flex-wrap:wrap;gap:9px}.result-actions button{flex:1;min-width:150px}
+.score-modal{position:fixed;inset:0;background:#000b;display:none;place-items:center;padding:20px;z-index:30}.score-modal.open{display:grid}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:28px;max-width:440px;width:100%}
+.modal h2{margin-bottom:8px}.modal p{color:var(--muted);font-size:14px}
+.big-score{font-size:54px;font-weight:900;text-align:center;margin:20px 0}.modal input{width:100%;accent-color:var(--green)}
+.modal-actions{display:flex;gap:9px;margin-top:20px}.modal-actions button{flex:1}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;background:#f5f5f2;color:#0b0b0d;padding:11px 15px;border-radius:10px;font-size:13px;font-weight:800;transition:.2s;z-index:40}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:820px){.home-grid,.result-card{grid-template-columns:1fr}.wheel{min-height:390px}.rating{min-width:0}.album-row{flex-wrap:wrap}.rating{width:100%}.rating input{flex:1}.bottom{align-items:flex-start;flex-direction:column}.big-cover{max-width:520px;margin:auto;width:100%}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="header">
+  <div class="logo">VINYL <span>DRAW</span></div>
+  <div class="header-right"><div id="profileCount" class="avatar">0</div></div>
+</header>
+
+<main>
+<section id="onboarding" class="screen active">
+  <div class="eyebrow">Tu perfil musical</div>
+  <h1>Cuéntanos qué te gusta.</h1>
+  <p class="sub"><span id="count">0</span> de 10 álbumes agregados. Califica lo que ya conoces para que la ruleta entienda tu gusto.</p>
+  <div class="search-wrap">
+    <input id="search" class="search" autocomplete="off" placeholder="Busca un álbum o artista…">
+    <div id="suggestions" class="suggestions" hidden></div>
+  </div>
+  <div id="albumList" class="album-list"></div>
+  <div class="bottom">
+    <div class="help">Puedes agregar hasta 10. Entre más variados, mejores recomendaciones.</div>
+    <button id="continueBtn" class="primary" disabled>Continuar</button>
+  </div>
+</section>
+
+<section id="home" class="screen">
+  <div class="eyebrow">Tu zona de descubrimiento</div>
+  <h1>¿Qué quieres escuchar?</h1>
+  <p class="sub">Gira una vez. Descubre un álbum a la vez.</p>
+  <div class="home-grid" style="margin-top:30px">
+    <div id="wheel" class="wheel">
+      <div class="wheel-center">
+        <div id="wheelMark" class="wheel-mark">◎</div>
+        <h2 id="wheelTitle">La ruleta está lista</h2>
+        <p id="wheelText">Elige un modo para descubrir.</p>
+      </div>
+    </div>
+    <div>
+      <div class="modes">
+        <button class="mode green" data-mode="safe"><b>🎯 Segura</b><span>Muy parecida a lo que ya te gusta: mismo género, subgénero o época de tus álbumes mejor calificados.</span></button>
+        <button class="mode amber" data-mode="mid"><b>🧭 Intermedia</b><span>No es completamente segura, pero comparte un par de cosas con tu perfil.</span></button>
+        <button class="mode violet" data-mode="random"><b>🎲 Aleatoria</b><span>Sorpresa total: un álbum al azar de todo el catálogo, sin filtros.</span></button>
+      </div>
+      <div class="sidebar">
+        <div class="stat" id="ratedStat">0 calificados</div>
+        <div class="stat" id="seenStat">0 descubiertos</div>
+      </div>
+      <div id="genreProfile" class="profile-genres"></div>
+    </div>
+  </div>
+</section>
+
+<section id="result" class="screen">
+  <div class="result">
+    <button id="backHome" class="secondary" style="margin-bottom:28px">← Volver a la ruleta</button>
+    <div class="result-card">
+      <div id="resultCover" class="big-cover"></div>
+      <div>
+        <div id="resultBadge" class="badge"></div>
+        <h1 id="resultTitle"></h1>
+        <div id="resultArtist" class="artist"></div>
+        <div id="resultDetails" class="details"></div>
+        <a id="covLink" class="cov-link" target="_blank" rel="noopener">Buscar otra portada en COV ↗</a>
+        <div id="resultReason" class="reason"></div>
+        <div class="result-actions">
+          <button id="heardBtn" class="primary">✓ Marcar como escuchado</button>
+          <button id="saveBtn" class="secondary">＋ Guardar para después</button>
+          <button id="rejectBtn" class="secondary">× No me interesa</button>
+          <button id="againBtn" class="secondary">↻ Girar otra vez</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<div id="scoreModal" class="score-modal">
+  <div class="modal">
+    <h2>¿Qué nota le das?</h2>
+    <p id="modalAlbum"></p>
+    <div id="bigScore" class="big-score">8</div>
+    <input id="modalSlider" type="range" min="1" max="10" value="8">
+    <div class="modal-actions">
+      <button id="cancelScore" class="secondary">Cancelar</button>
+      <button id="confirmScore" class="primary">Guardar calificación</button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const ALBUMS = [{"id":"nas-illmatic-1994","titulo":"Illmatic","artista":"Nas","anio":1994,"genero_principal":"Hip-hop/Rap","subgenero":"boom bap","caracteristicas":["narrativa vívida de barrio","flow técnico","producción de muestras clásicas"],"aclamacion":"alta","portada_url":""},{"id":"drdre-chronic-1992","titulo":"The Chronic","artista":"Dr. Dre","anio":1992,"genero_principal":"Hip-hop/Rap","subgenero":"g-funk","caracteristicas":["producción groove","atmósfera West Coast","cohesión sonora"],"aclamacion":"alta","portada_url":""},{"id":"biggie-readytodie-1994","titulo":"Ready to Die","artista":"The Notorious B.I.G.","anio":1994,"genero_principal":"Hip-hop/Rap","subgenero":"east coast hardcore","caracteristicas":["narrativa cruda","presencia vocal dominante","contrastes de tono"],"aclamacion":"alta","portada_url":""},{"id":"jayz-reasonabledoubt-1996","titulo":"Reasonable Doubt","artista":"Jay-Z","anio":1996,"genero_principal":"Hip-hop/Rap","subgenero":"mafioso rap","caracteristicas":["storytelling detallado","flow relajado y seguro","producción soul-sample"],"aclamacion":"alta","portada_url":""},{"id":"outkast-aquemini-1998","titulo":"Aquemini","artista":"OutKast","anio":1998,"genero_principal":"Hip-hop/Rap","subgenero":"southern rap experimental","caracteristicas":["experimentación coherente","fusión de géneros","letras filosóficas"],"aclamacion":"alta","portada_url":""},{"id":"outkast-stankonia-2000","titulo":"Stankonia","artista":"OutKast","anio":2000,"genero_principal":"Hip-hop/Rap","subgenero":"southern rap/funk","caracteristicas":["producción maximalista","energía funk","diversidad de tempos"],"aclamacion":"alta","portada_url":""},{"id":"eminem-mmlp-2000","titulo":"The Marshall Mathers LP","artista":"Eminem","anio":2000,"genero_principal":"Hip-hop/Rap","subgenero":"horrorcore/battle rap","caracteristicas":["velocidad y técnica lírica","cadencias complejas","tono provocador"],"aclamacion":"alta","portada_url":""},{"id":"kanye-lateregistration-2005","titulo":"Late Registration","artista":"Kanye West","anio":2005,"genero_principal":"Hip-hop/Rap","subgenero":"chipmunk soul","caracteristicas":["producción orquestal","muestras soul aceleradas","atmósfera cálida"],"aclamacion":"alta","portada_url":""},{"id":"kanye-collegedropout-2004","titulo":"The College Dropout","artista":"Kanye West","anio":2004,"genero_principal":"Hip-hop/Rap","subgenero":"conscious rap","caracteristicas":["producción soul-sample","letras introspectivas","humor y crítica social"],"aclamacion":"alta","portada_url":""},{"id":"snoop-doggystyle-1993","titulo":"Doggystyle","artista":"Snoop Dogg","anio":1993,"genero_principal":"Hip-hop/Rap","subgenero":"g-funk","caracteristicas":["flow melódico y relajado","producción funk suave","atmósfera West Coast"],"aclamacion":"alta","portada_url":""},{"id":"biggie-lifeafterdeath-1997","titulo":"Life After Death","artista":"The Notorious B.I.G.","anio":1997,"genero_principal":"Hip-hop/Rap","subgenero":"east coast hardcore","caracteristicas":["versatilidad de flow","producción pulida","narrativa expandida"],"aclamacion":"alta","portada_url":""},{"id":"nas-itwaswritten-1996","titulo":"It Was Written","artista":"Nas","anio":1996,"genero_principal":"Hip-hop/Rap","subgenero":"mafioso rap","caracteristicas":["producción cinematográfica","narrativa madura","flow pulido"],"aclamacion":"alta","portada_url":""},{"id":"ghostface-supremeclientele-2000","titulo":"Supreme Clientele","artista":"Ghostface Killah","anio":2000,"genero_principal":"Hip-hop/Rap","subgenero":"east coast abstracto","caracteristicas":["lirismo denso y surrealista","producción con samples oscuros","cadencia entrecortada"],"aclamacion":"culto","portada_url":""},{"id":"gza-liquidswords-1995","titulo":"Liquid Swords","artista":"GZA","anio":1995,"genero_principal":"Hip-hop/Rap","subgenero":"wu-tang rap","caracteristicas":["atmósfera oscura y cinematográfica","lirismo denso","producción minimalista y fría"],"aclamacion":"culto","portada_url":""},{"id":"wutang-36chambers-1993","titulo":"Enter the Wu-Tang (36 Chambers)","artista":"Wu-Tang Clan","anio":1993,"genero_principal":"Hip-hop/Rap","subgenero":"east coast crudo","caracteristicas":["producción cruda y polvorienta","múltiples voces y estilos","atmósfera de calle"],"aclamacion":"alta","portada_url":""},{"id":"chance-acidrap-2013","titulo":"Acid Rap","artista":"Chance the Rapper","anio":2013,"genero_principal":"Hip-hop/Rap","subgenero":"rap alegre/experimental","caracteristicas":["energía y calidez","experimentación melódica","estructuras poco convencionales"],"aclamacion":"culto","portada_url":""},{"id":"gambino-becausetheinternet-2013","titulo":"Because the Internet","artista":"Childish Gambino","anio":2013,"genero_principal":"Hip-hop/Rap","subgenero":"rap conceptual","caracteristicas":["atmósfera introspectiva","producción atmosférica","narrativa no lineal"],"aclamacion":"media","portada_url":""},{"id":"future-ds2-2015","titulo":"DS2","artista":"Future","anio":2015,"genero_principal":"Hip-hop/Rap","subgenero":"trap oscuro","caracteristicas":["atmósfera nocturna","flow autotune melódico","producción minimalista y pesada"],"aclamacion":"alta","portada_url":""},{"id":"drake-ifyoureadingthis-2015","titulo":"If You're Reading This It's Too Late","artista":"Drake","anio":2015,"genero_principal":"Hip-hop/Rap","subgenero":"trap melódico","caracteristicas":["tono introspectivo","producción atmosférica","flow conversacional"],"aclamacion":"alta","portada_url":""},{"id":"gibbsmadlib-pinata-2014","titulo":"Piñata","artista":"Freddie Gibbs & Madlib","anio":2014,"genero_principal":"Hip-hop/Rap","subgenero":"boom bap experimental","caracteristicas":["producción polvorienta de samples","narrativa cruda de calle","flow técnico"],"aclamacion":"culto","portada_url":""},{"id":"radiohead-okcomputer-1997","titulo":"OK Computer","artista":"Radiohead","anio":1997,"genero_principal":"Rock/Alt/Metal","subgenero":"art rock","caracteristicas":["atmósfera ansiosa y futurista","estructuras no convencionales","producción texturizada"],"aclamacion":"alta","portada_url":""},{"id":"radiohead-inrainbows-2007","titulo":"In Rainbows","artista":"Radiohead","anio":2007,"genero_principal":"Rock/Alt/Metal","subgenero":"art rock/electrónico","caracteristicas":["producción cálida y orgánica","atmósfera íntima","experimentación sutil"],"aclamacion":"alta","portada_url":""},{"id":"nirvana-nevermind-1991","titulo":"Nevermind","artista":"Nirvana","anio":1991,"genero_principal":"Rock/Alt/Metal","subgenero":"grunge","caracteristicas":["energía cruda","dinámicas suave-fuerte","melodías inmediatas"],"aclamacion":"alta","portada_url":""},{"id":"nin-downwardspiral-1994","titulo":"The Downward Spiral","artista":"Nine Inch Nails","anio":1994,"genero_principal":"Rock/Alt/Metal","subgenero":"industrial rock","caracteristicas":["atmósfera oscura y agresiva","producción distorsionada","tensión emocional intensa"],"aclamacion":"alta","portada_url":""},{"id":"metallica-masterofpuppets-1986","titulo":"Master of Puppets","artista":"Metallica","anio":1986,"genero_principal":"Rock/Alt/Metal","subgenero":"thrash metal","caracteristicas":["riffs técnicos y veloces","estructuras progresivas","energía agresiva"],"aclamacion":"alta","portada_url":""},{"id":"tameimpala-lonerism-2012","titulo":"Lonerism","artista":"Tame Impala","anio":2012,"genero_principal":"Rock/Alt/Metal","subgenero":"psych rock","caracteristicas":["producción psicodélica en capas","atmósfera introspectiva","melodías soñadoras"],"aclamacion":"alta","portada_url":""},{"id":"ratm-selftitled-1992","titulo":"Rage Against the Machine","artista":"Rage Against the Machine","anio":1992,"genero_principal":"Rock/Alt/Metal","subgenero":"rap metal","caracteristicas":["fusión de rap y metal","energía combativa","riffs pesados y groove"],"aclamacion":"alta","portada_url":""},{"id":"interpol-turnonthebrightlights-2002","titulo":"Turn On the Bright Lights","artista":"Interpol","anio":2002,"genero_principal":"Rock/Alt/Metal","subgenero":"post-punk revival","caracteristicas":["atmósfera nocturna urbana","bajo prominente","tono melancólico"],"aclamacion":"media","portada_url":""},{"id":"fleetwoodmac-rumours-1977","titulo":"Rumours","artista":"Fleetwood Mac","anio":1977,"genero_principal":"Rock/Alt/Metal","subgenero":"soft rock","caracteristicas":["melodías pulidas","armonías vocales","tensión emocional bajo superficie pop"],"aclamacion":"alta","portada_url":""},{"id":"dangelo-voodoo-2000","titulo":"Voodoo","artista":"D'Angelo","anio":2000,"genero_principal":"R&B/Soul/Jazz","subgenero":"neo soul","caracteristicas":["groove suelto y orgánico","atmósfera sensual","producción minimalista"],"aclamacion":"alta","portada_url":""},{"id":"stevie-songsinthekey-1976","titulo":"Songs in the Key of Life","artista":"Stevie Wonder","anio":1976,"genero_principal":"R&B/Soul/Jazz","subgenero":"soul/funk","caracteristicas":["riqueza melódica","producción cálida y expansiva","diversidad estilística"],"aclamacion":"alta","portada_url":""},{"id":"marvingaye-whatsgoingon-1971","titulo":"What's Going On","artista":"Marvin Gaye","anio":1971,"genero_principal":"R&B/Soul/Jazz","subgenero":"soul social","caracteristicas":["cohesión conceptual","atmósfera introspectiva","producción orquestal suave"],"aclamacion":"alta","portada_url":""},{"id":"sza-ctrl-2017","titulo":"Ctrl","artista":"SZA","anio":2017,"genero_principal":"R&B/Soul/Jazz","subgenero":"R&B alternativo","caracteristicas":["vulnerabilidad lírica","producción atmosférica","voces en capas"],"aclamacion":"alta","portada_url":""},{"id":"frankocean-blonde-2016","titulo":"Blonde","artista":"Frank Ocean","anio":2016,"genero_principal":"R&B/Soul/Jazz","subgenero":"R&B experimental","caracteristicas":["atmósfera etérea","estructuras no convencionales","introspección emocional"],"aclamacion":"alta","portada_url":""},{"id":"milesdavis-kindofblue-1959","titulo":"Kind of Blue","artista":"Miles Davis","anio":1959,"genero_principal":"R&B/Soul/Jazz","subgenero":"jazz modal","caracteristicas":["improvisación espaciosa","atmósfera contemplativa","cohesión de conjunto"],"aclamacion":"alta","portada_url":""},{"id":"coltrane-alovesupreme-1965","titulo":"A Love Supreme","artista":"John Coltrane","anio":1965,"genero_principal":"R&B/Soul/Jazz","subgenero":"jazz espiritual","caracteristicas":["intensidad emocional","improvisación extendida","cohesión conceptual"],"aclamacion":"alta","portada_url":""},{"id":"daftpunk-discovery-2001","titulo":"Discovery","artista":"Daft Punk","anio":2001,"genero_principal":"Electrónica/Experimental","subgenero":"house/electro-pop","caracteristicas":["melodías pegajosas","producción brillante","nostalgia sample-based"],"aclamacion":"alta","portada_url":""},{"id":"aphextwin-saw85-92-1992","titulo":"Selected Ambient Works 85-92","artista":"Aphex Twin","anio":1992,"genero_principal":"Electrónica/Experimental","subgenero":"ambient/IDM","caracteristicas":["texturas hipnóticas","atmósfera introspectiva","producción minimalista"],"aclamacion":"culto","portada_url":""},{"id":"avalanches-sinceileftyou-2000","titulo":"Since I Left You","artista":"The Avalanches","anio":2000,"genero_principal":"Electrónica/Experimental","subgenero":"plunderphonics","caracteristicas":["collage de samples denso","atmósfera eufórica","cohesión a pesar de la fragmentación"],"aclamacion":"culto","portada_url":""},{"id":"flyinglotus-cosmogramma-2010","titulo":"Cosmogramma","artista":"Flying Lotus","anio":2010,"genero_principal":"Electrónica/Experimental","subgenero":"electrónica experimental/jazz","caracteristicas":["producción caótica y en capas","fusión de jazz y electrónica","atmósfera cósmica"],"aclamacion":"culto","portada_url":""},{"id":"djshadow-endtroducing-1996","titulo":"Endtroducing.....","artista":"DJ Shadow","anio":1996,"genero_principal":"Electrónica/Experimental","subgenero":"instrumental hip-hop/downtempo","caracteristicas":["producción basada enteramente en samples","atmósfera cinematográfica","estructura de collage"],"aclamacion":"alta","portada_url":""},{"id":"badbunny-yhlqmdlg-2020","titulo":"YHLQMDLG","artista":"Bad Bunny","anio":2020,"genero_principal":"Latin/Reggaeton","subgenero":"reggaeton/latin trap","caracteristicas":["producción moderna y variada","energía festiva","experimentación dentro del género"],"aclamacion":"alta","portada_url":""},{"id":"ctangana-elmadrileno-2021","titulo":"El Madrileño","artista":"C. Tangana","anio":2021,"genero_principal":"Latin/Reggaeton","subgenero":"flamenco-pop fusión","caracteristicas":["fusión de tradición y modernidad","producción rica en texturas","colaboraciones variadas"],"aclamacion":"alta","portada_url":""},{"id":"can-egebamyasi-1972","titulo":"Ege Bamyasi","artista":"Can","anio":1972,"genero_principal":"Wildcard","subgenero":"krautrock","caracteristicas":["groove hipnótico y repetitivo","experimentación estructural","atmósfera casi trance"],"aclamacion":"culto","portada_url":""},{"id":"boardsofcanada-mhrttc-1998","titulo":"Music Has the Right to Children","artista":"Boards of Canada","anio":1998,"genero_principal":"Wildcard","subgenero":"ambient/downtempo","caracteristicas":["texturas nostálgicas y difusas","atmósfera onírica","producción hipnótica"],"aclamacion":"culto","portada_url":""},{"id":"travisscott-daysbeforerodeo-2014","titulo":"Days Before Rodeo","artista":"Travis Scott","anio":2014,"genero_principal":"Hip-hop/Rap","subgenero":"trap atmosférico","caracteristicas":["producción atmosférica temprana","auto-tune melódico","energía de mixtape"],"aclamacion":"media","portada_url":""},{"id":"travisscott-rodeo-2015","titulo":"Rodeo","artista":"Travis Scott","anio":2015,"genero_principal":"Hip-hop/Rap","subgenero":"trap psicodélico","caracteristicas":["producción cinematográfica y expansiva","atmósfera onírica","cohesión de concepto"],"aclamacion":"alta","portada_url":""},{"id":"travisscott-birdsinthetrap-2016","titulo":"Birds in the Trap Sing McKnight","artista":"Travis Scott","anio":2016,"genero_principal":"Hip-hop/Rap","subgenero":"trap experimental","caracteristicas":["producción densa y estratificada","estructuras poco convencionales","atmósfera oscura"],"aclamacion":"alta","portada_url":""},{"id":"travisscott-hunchojack-2017","titulo":"Huncho Jack, Jack Huncho","artista":"Travis Scott & Quavo","anio":2017,"genero_principal":"Hip-hop/Rap","subgenero":"trap colaborativo","caracteristicas":["producción minimalista","flow relajado","energía de dúo"],"aclamacion":"media","portada_url":""},{"id":"travisscott-astroworld-2018","titulo":"Astroworld","artista":"Travis Scott","anio":2018,"genero_principal":"Hip-hop/Rap","subgenero":"trap maximalista","caracteristicas":["producción de parque de diversiones sonoro","eclecticismo de colaboraciones","cohesión temática"],"aclamacion":"alta","portada_url":""},{"id":"travisscott-jackboys-2019","titulo":"JACKBOYS","artista":"JACKBOYS","anio":2019,"genero_principal":"Hip-hop/Rap","subgenero":"trap colectivo","caracteristicas":["formato de mixtape colectivo","energía festiva","producción variada"],"aclamacion":"media","portada_url":""},{"id":"travisscott-utopia-2023","titulo":"UTOPIA","artista":"Travis Scott","anio":2023,"genero_principal":"Hip-hop/Rap","subgenero":"trap experimental","caracteristicas":["producción expansiva y ambiciosa","atmósfera oscura y espacial","eclecticismo de samples"],"aclamacion":"alta","portada_url":""},{"id":"travisscott-jackboys2-2024","titulo":"JACKBOYS 2","artista":"JACKBOYS","anio":2024,"genero_principal":"Hip-hop/Rap","subgenero":"trap colectivo","caracteristicas":["formato colectivo","producción variada","energía festiva"],"aclamacion":"media","portada_url":""},{"id":"kanye-graduation-2007","titulo":"Graduation","artista":"Kanye West","anio":2007,"genero_principal":"Hip-hop/Rap","subgenero":"hip-hop maximalista/electro","caracteristicas":["producción brillante de estadio","fusión con synth-pop","energía ambiciosa"],"aclamacion":"alta","portada_url":""},{"id":"kanye-808sheartbreak-2008","titulo":"808s & Heartbreak","artista":"Kanye West","anio":2008,"genero_principal":"Hip-hop/Rap","subgenero":"rap cantado/electro-pop","caracteristicas":["voz autotuneada emocional","producción minimalista y fría","atmósfera de duelo"],"aclamacion":"alta","portada_url":""},{"id":"kanye-mbdtf-2010","titulo":"My Beautiful Dark Twisted Fantasy","artista":"Kanye West","anio":2010,"genero_principal":"Hip-hop/Rap","subgenero":"maximalist rap","caracteristicas":["producción densa","experimentación cohesiva","atmósfera cinematográfica"],"aclamacion":"alta","portada_url":""},{"id":"kanye-yeezus-2013","titulo":"Yeezus","artista":"Kanye West","anio":2013,"genero_principal":"Hip-hop/Rap","subgenero":"industrial hip-hop","caracteristicas":["producción agresiva y minimalista","distorsión industrial","tono confrontacional"],"aclamacion":"alta","portada_url":""},{"id":"kanye-donda-2021","titulo":"Donda","artista":"Kanye West","anio":2021,"genero_principal":"Hip-hop/Rap","subgenero":"gospel-trap maximalista","caracteristicas":["producción expansiva y espiritual","tracklist extensa","tono introspectivo religioso"],"aclamacion":"media","portada_url":""},{"id":"kanye-bully-2026","titulo":"Bully (Deluxe)","artista":"Kanye West","anio":2026,"genero_principal":"Hip-hop/Rap","subgenero":"hip-hop experimental reciente","caracteristicas":["producción cruda reciente","tono provocador","experimentación irregular"],"aclamacion":"media","portada_url":""},{"id":"kendrick-gkmc-2012","titulo":"good kid, m.A.A.d city","artista":"Kendrick Lamar","anio":2012,"genero_principal":"Hip-hop/Rap","subgenero":"concept rap narrativo","caracteristicas":["narrativa cinematográfica de coming-of-age","producción variada por escena","cohesión conceptual"],"aclamacion":"alta","portada_url":""},{"id":"kendrick-damn-2017","titulo":"DAMN.","artista":"Kendrick Lamar","anio":2017,"genero_principal":"Hip-hop/Rap","subgenero":"rap conceptual","caracteristicas":["estructura temática dual","producción variada","lirismo denso"],"aclamacion":"alta","portada_url":""},{"id":"kendrick-mrmorale-2022","titulo":"Mr. Morale & the Big Steppers","artista":"Kendrick Lamar","anio":2022,"genero_principal":"Hip-hop/Rap","subgenero":"rap introspectivo/terapéutico","caracteristicas":["vulnerabilidad extrema","producción minimalista y cruda","estructura de doble álbum"],"aclamacion":"alta","portada_url":""},{"id":"kendrick-gnx-2024","titulo":"GNX","artista":"Kendrick Lamar","anio":2024,"genero_principal":"Hip-hop/Rap","subgenero":"west coast rap reciente","caracteristicas":["producción regional actualizada","tono confiado","referencias locales"],"aclamacion":"alta","portada_url":""},{"id":"kendrick-tpab-2015","titulo":"To Pimp a Butterfly","artista":"Kendrick Lamar","anio":2015,"genero_principal":"Hip-hop/Rap","subgenero":"jazz-rap conceptual","caracteristicas":["fusión de jazz, funk y spoken word","narrativa densa sobre raza e identidad","cohesión conceptual ambiciosa"],"aclamacion":"alta","portada_url":""},{"id":"dontoliver-hardstonepsycho-2023","titulo":"Hardstone Psycho","artista":"Don Toliver","anio":2023,"genero_principal":"Hip-hop/Rap","subgenero":"trap melódico/rock-tinged","caracteristicas":["fusión con texturas rock","voz melódica etérea","producción experimental"],"aclamacion":"media","portada_url":""},{"id":"dontoliver-octane-2024","titulo":"Octane","artista":"Don Toliver","anio":2024,"genero_principal":"Hip-hop/Rap","subgenero":"trap melódico","caracteristicas":["producción brillante","voz melódica prominente","energía de club"],"aclamacion":"media","portada_url":""},{"id":"future-ineverlikedyou-2022","titulo":"I Never Liked You","artista":"Future","anio":2022,"genero_principal":"Hip-hop/Rap","subgenero":"trap melódico oscuro","caracteristicas":["atmósfera introspectiva y nocturna","producción minimalista y pesada","flow autotune"],"aclamacion":"alta","portada_url":""},{"id":"future-wedonttrustyou-2024","titulo":"We Don't Trust You","artista":"Future & Metro Boomin","anio":2024,"genero_principal":"Hip-hop/Rap","subgenero":"trap oscuro colaborativo","caracteristicas":["producción cinematográfica","cohesión entre rapero y productor","tono confrontacional"],"aclamacion":"alta","portada_url":""},{"id":"future-therealme-2025","titulo":"The Real Me","artista":"Future","anio":2025,"genero_principal":"Hip-hop/Rap","subgenero":"trap reciente","caracteristicas":["producción variable","flow autotune","tono irregular"],"aclamacion":"media","portada_url":""},{"id":"future-evol-2016","titulo":"EVOL","artista":"Future","anio":2016,"genero_principal":"Hip-hop/Rap","subgenero":"trap oscuro","caracteristicas":["atmósfera nocturna cruda","producción minimalista","tono desapegado"],"aclamacion":"media","portada_url":""},{"id":"asaprocky-atlonglastasap-2015","titulo":"AT.LONG.LAST.A$AP","artista":"A$AP Rocky","anio":2015,"genero_principal":"Hip-hop/Rap","subgenero":"psychedelic rap","caracteristicas":["producción psicodélica y experimental","colaboraciones eclécticas","atmósfera introspectiva"],"aclamacion":"alta","portada_url":""},{"id":"asaprocky-dontbedumb-2025","titulo":"Don't Be Dumb","artista":"A$AP Rocky","anio":2025,"genero_principal":"Hip-hop/Rap","subgenero":"rap experimental reciente","caracteristicas":["producción variada","tono confiado","experimentación estilística"],"aclamacion":"media","portada_url":""},{"id":"carti-selftitled-2017","titulo":"Playboi Carti","artista":"Playboi Carti","anio":2017,"genero_principal":"Hip-hop/Rap","subgenero":"rage/mumble rap","caracteristicas":["producción minimalista y ambiental","flow ad-lib repetitivo","energía de mixtape"],"aclamacion":"media","portada_url":""},{"id":"carti-dielit-2018","titulo":"Die Lit","artista":"Playboi Carti","anio":2018,"genero_principal":"Hip-hop/Rap","subgenero":"rage rap","caracteristicas":["producción enérgica de festival","flow ad-lib prominente","colaboraciones extensas"],"aclamacion":"alta","portada_url":""},{"id":"carti-whitewhitelottared-2020","titulo":"Whole Lotta Red","artista":"Playboi Carti","anio":2020,"genero_principal":"Hip-hop/Rap","subgenero":"rage/punk rap","caracteristicas":["producción agresiva y distorsionada","estética punk","vocalización experimental"],"aclamacion":"media","portada_url":""},{"id":"carti-music-2025","titulo":"MUSIC","artista":"Playboi Carti","anio":2025,"genero_principal":"Hip-hop/Rap","subgenero":"rage rap","caracteristicas":["producción extensa y variada","flow ad-lib","eclecticismo de tracklist larga"],"aclamacion":"media","portada_url":""},{"id":"metroboomin-heroesvillains-2022","titulo":"Heroes & Villains","artista":"Metro Boomin","anio":2022,"genero_principal":"Hip-hop/Rap","subgenero":"trap cinematográfico","caracteristicas":["producción cinematográfica y oscura","curaduría de features","cohesión temática de álbum de productor"],"aclamacion":"alta","portada_url":""},{"id":"metroboomin-spiderverse-2023","titulo":"Across the Spider-Verse Soundtrack","artista":"Metro Boomin","anio":2023,"genero_principal":"Hip-hop/Rap","subgenero":"soundtrack trap","caracteristicas":["producción cinematográfica ligada a narrativa visual","curaduría de features","atmósfera heroica"],"aclamacion":"alta","portada_url":""},{"id":"jcole-thefalloff-2026","titulo":"The Fall-Off","artista":"J. Cole","anio":2026,"genero_principal":"Hip-hop/Rap","subgenero":"conscious rap narrativo","caracteristicas":["narrativa introspectiva de cierre de etapa","producción cálida y orgánica","cohesión lírica"],"aclamacion":"alta","portada_url":""},{"id":"jcole-2014fhd-2014","titulo":"2014 Forest Hills Drive","artista":"J. Cole","anio":2014,"genero_principal":"Hip-hop/Rap","subgenero":"conscious rap narrativo","caracteristicas":["narrativa autobiográfica cohesiva","producción cálida minimalista","sin features, enfoque puro"],"aclamacion":"alta","portada_url":""},{"id":"drake-takecare-2011","titulo":"Take Care (Deluxe)","artista":"Drake","anio":2011,"genero_principal":"Hip-hop/Rap","subgenero":"R&B-rap atmosférico","caracteristicas":["producción atmosférica y nocturna","tono introspectivo","fusión rap/R&B"],"aclamacion":"alta","portada_url":""},{"id":"youngthug-somuchfun-2019","titulo":"So Much Fun (Deluxe)","artista":"Young Thug","anio":2019,"genero_principal":"Hip-hop/Rap","subgenero":"trap experimental vocal","caracteristicas":["vocalización excéntrica y elástica","producción variada","energía impredecible"],"aclamacion":"media","portada_url":""},{"id":"youngthug-barter6-2015","titulo":"Barter 6","artista":"Young Thug","anio":2015,"genero_principal":"Hip-hop/Rap","subgenero":"trap melódico temprano","caracteristicas":["voz distintiva y maleable","producción atmosférica","influencia de Lil Wayne"],"aclamacion":"culto","portada_url":""},{"id":"tyler-igor-2019","titulo":"IGOR","artista":"Tyler, The Creator","anio":2019,"genero_principal":"Hip-hop/Rap","subgenero":"neo-soul rap conceptual","caracteristicas":["narrativa de ruptura amorosa","producción cálida y orgánica","cohesión conceptual de personaje"],"aclamacion":"alta","portada_url":""},{"id":"tyler-cmiygl-2021","titulo":"Call Me If You Get Lost (Deluxe)","artista":"Tyler, The Creator","anio":2021,"genero_principal":"Hip-hop/Rap","subgenero":"rap de lujo/mixtape","caracteristicas":["producción de horns y soul samples","formato de mixtape narrado","energía confiada"],"aclamacion":"alta","portada_url":""},{"id":"tyler-chromakopia-2024","titulo":"CHROMAKOPIA","artista":"Tyler, The Creator","anio":2024,"genero_principal":"Hip-hop/Rap","subgenero":"rap introspectivo/teatral","caracteristicas":["narrativa personal profunda","producción variada y teatral","voces de personajes"],"aclamacion":"alta","portada_url":""},{"id":"laufey-bewitched-2023","titulo":"Bewitched","artista":"Laufey","anio":2023,"genero_principal":"R&B/Soul/Jazz","subgenero":"jazz-pop vocal","caracteristicas":["voz clásica y cálida","producción orquestal íntima","influencia de jazz clásico"],"aclamacion":"alta","portada_url":""},{"id":"deftones-whitepony-2000","titulo":"White Pony","artista":"Deftones","anio":2000,"genero_principal":"Rock/Alt/Metal","subgenero":"alternative metal atmosférico","caracteristicas":["fusión de agresión y belleza melódica","atmósfera onírica","dinámicas de intensidad variable"],"aclamacion":"alta","portada_url":""},{"id":"deftones-koinoyokan-2012","titulo":"Koi No Yokan","artista":"Deftones","anio":2012,"genero_principal":"Rock/Alt/Metal","subgenero":"alternative metal atmosférico","caracteristicas":["producción texturizada y envolvente","melodías etéreas sobre riffs pesados","cohesión atmosférica"],"aclamacion":"alta","portada_url":""},{"id":"mj-thriller-1982","titulo":"Thriller","artista":"Michael Jackson","anio":1982,"genero_principal":"R&B/Soul/Jazz","subgenero":"pop-soul/funk","caracteristicas":["producción pulida y atemporal","diversidad de estilos dentro del pop","ganchos melódicos inmediatos"],"aclamacion":"alta","portada_url":""},{"id":"tainy-data-2023","titulo":"DATA","artista":"Tainy","anio":2023,"genero_principal":"Latin/Reggaeton","subgenero":"reggaeton-electrónico experimental","caracteristicas":["producción futurista y detallada","fusión de reggaeton y electrónica","curaduría de colaboraciones variadas"],"aclamacion":"alta","portada_url":""},{"id":"tameimpala-currents-2015","titulo":"Currents","artista":"Tame Impala","anio":2015,"genero_principal":"Rock/Alt/Metal","subgenero":"psych-pop/synth","caracteristicas":["producción synth brillante","introspección emocional","transición hacia sonido más electrónico"],"aclamacion":"alta","portada_url":""},{"id":"migos-culture-2017","titulo":"Culture","artista":"Migos","anio":2017,"genero_principal":"Hip-hop/Rap","subgenero":"trap ATL","caracteristicas":["flow triplet icónico","producción ATL clásica","energía de club"],"aclamacion":"alta","portada_url":""},{"id":"yeat-dangeroussummer-2023","titulo":"Dangerous Summer","artista":"Yeat","anio":2023,"genero_principal":"Hip-hop/Rap","subgenero":"rage/trap experimental","caracteristicas":["producción distorsionada y densa","vocalización procesada","energía caótica"],"aclamacion":"media","portada_url":""},{"id":"fishmans-longseason-1996","titulo":"Long Season","artista":"Fishmans","anio":1996,"genero_principal":"Wildcard","subgenero":"j-rock experimental/dub","caracteristicas":["estructura de pista única extendida","capas graduales de texturas","atmósfera hipnótica y emotiva"],"aclamacion":"culto","portada_url":""},{"id":"madvillain-madvillainy-2004","titulo":"Madvillainy","artista":"Madvillain","anio":2004,"genero_principal":"Hip-hop/Rap","subgenero":"abstract/underground hip-hop","caracteristicas":["producción de samples oscuros e inusuales","flow conversacional no convencional","estética lo-fi deliberada"],"aclamacion":"culto","portada_url":""}];
+const state = {
+  screen: "onboarding",
+  profile: [],             // {albumId, rating}
+  statuses: {},            // albumId -> "heard" | "pending" | "discarded"
+  ratings: {},             // all ratings by albumId
+  current: null,
+  currentMode: null
+};
+
+const $ = id => document.getElementById(id);
+
+function colorFor(album){
+  // Deterministic palette from album id. Placeholder replaces missing cover art.
+  const palettes = ["#5B3E8C","#315C7D","#8A4B3A","#3B6B55","#8B6D2E","#6B3E5E","#3A5968","#7B4937"];
+  let n=0; for(const c of album.id) n=(n+c.charCodeAt(0))%palettes.length;
+  return palettes[n];
+}
+function initialFor(album){
+  const stop = new Set(["the","a","an","and","of","in","to","for","on","&"]);
+  const words = album.titulo.replace(/[^\p{L}\p{N}& ]/gu," ").trim().split(/\s+/).filter(w=>!stop.has(w.toLowerCase()));
+  return (words[0]||album.titulo).slice(0,2).toUpperCase();
+}
+// Link to manually search/pick a cover on covers.musichoarders.xyz (COV).
+// COV itself is a client-rendered search UI, not a callable API, so we can't
+// pull an image URL from it programmatically — this opens it pre-filled instead.
+function covUrl(album){
+  return `https://covers.musichoarders.xyz/?artist=${encodeURIComponent(album.artista)}&album=${encodeURIComponent(album.titulo)}`;
+}
+// Real cover art comes from the iTunes Search API (no key, CORS-enabled — one of
+// the sources COV itself aggregates). Cached in memory per album id; falls back
+// to the color+initial placeholder if the lookup fails or finds nothing.
+const coverCache = {};
+async function fetchCoverUrl(album){
+  if(coverCache[album.id]!==undefined) return coverCache[album.id];
+  try{
+    const q=encodeURIComponent(`${album.artista} ${album.titulo}`);
+    const res=await fetch(`https://itunes.apple.com/search?term=${q}&entity=album&limit=1`);
+    const data=await res.json();
+    const raw=data.results && data.results[0] && data.results[0].artworkUrl100;
+    const url=raw? raw.replace("100x100bb","600x600bb") : null;
+    coverCache[album.id]=url;
+    return url;
+  }catch(e){
+    coverCache[album.id]=null;
+    return null;
+  }
+}
+function applyImg(el,url){
+  el.style.backgroundImage=`url("${url}")`;
+  el.textContent="";
+}
+function cover(el, album){
+  el.style.backgroundImage="";
+  el.style.background = colorFor(album);
+  el.textContent = initialFor(album);
+  el.dataset.coverFor = album.id;
+  const cached = coverCache[album.id];
+  if(cached){ applyImg(el, cached); return; }
+  if(cached===null) return; // known miss, keep the placeholder
+  fetchCoverUrl(album).then(url=>{
+    if(el.dataset.coverFor!==album.id) return; // element moved on to another album
+    if(url) applyImg(el, url);
+  });
+}
+function go(screen){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  $(screen).classList.add("active");
+  state.screen=screen;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function toast(msg){
+  $("toast").textContent=msg; $("toast").classList.add("show");
+  clearTimeout(toast.t); toast.t=setTimeout(()=>$("toast").classList.remove("show"),1800);
+}
+function updateHeader(){
+  $("profileCount").textContent=state.profile.length;
+}
+function renderOnboarding(){
+  $("count").textContent=state.profile.length;
+  updateHeader();
+  $("continueBtn").disabled=state.profile.length<3;
+  const list=$("albumList"); list.innerHTML="";
+  state.profile.forEach(item=>{
+    const a=ALBUMS.find(x=>x.id===item.albumId); if(!a)return;
+    const row=document.createElement("div"); row.className="album-row";
+    const c=document.createElement("div"); c.className="cover"; cover(c,a);
+    const info=document.createElement("div"); info.className="row-info";
+    info.innerHTML=`<h3>${escapeHtml(a.titulo)}</h3><p>${escapeHtml(a.artista)} · ${a.anio}</p><a class="cov-link" style="margin-top:4px" href="${covUrl(a)}" target="_blank" rel="noopener">Buscar portada ↗</a>`;
+    const rating=document.createElement("div"); rating.className="rating";
+    rating.innerHTML=`<input type="range" min="1" max="10" value="${item.rating}" aria-label="Calificación"><span class="rating-value">${item.rating}</span>`;
+    const slider=rating.querySelector("input"), value=rating.querySelector(".rating-value");
+    slider.oninput=()=>{item.rating=+slider.value; value.textContent=item.rating; state.ratings[a.id]=item.rating;};
+    const del=document.createElement("button"); del.className="icon-btn"; del.textContent="×"; del.title="Eliminar";
+    del.onclick=()=>{state.profile=state.profile.filter(x=>x.albumId!==a.id); delete state.ratings[a.id]; renderOnboarding();};
+    row.append(c,info,rating,del); list.append(row);
+  });
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+
+$("search").addEventListener("input", e=>{
+  const q=e.target.value.trim().toLowerCase();
+  const box=$("suggestions");
+  if(!q){box.hidden=true;box.innerHTML="";return}
+  const added=new Set(state.profile.map(x=>x.albumId));
+  const results=ALBUMS.filter(a=>!added.has(a.id)&&(`${a.titulo} ${a.artista}`.toLowerCase().includes(q))).slice(0,7);
+  box.innerHTML="";
+  results.forEach(a=>{
+    const b=document.createElement("button"); b.className="suggestion";
+    const c=document.createElement("div"); c.className="mini-cover"; cover(c,a);
+    b.append(c, Object.assign(document.createElement("div"),{className:"meta",innerHTML:`<strong>${escapeHtml(a.titulo)}</strong><small>${escapeHtml(a.artista)} · ${a.anio}</small>`}));
+    b.onclick=()=>addProfile(a);
+    box.append(b);
+  });
+  box.hidden=results.length===0;
+});
+function addProfile(a){
+  if(state.profile.length>=10)return toast("Máximo 10 álbumes.");
+  state.profile.push({albumId:a.id,rating:8}); state.ratings[a.id]=8;
+  $("search").value=""; $("suggestions").hidden=true; renderOnboarding();
+}
+document.addEventListener("click",e=>{if(!e.target.closest(".search-wrap"))$("suggestions").hidden=true});
+
+$("continueBtn").onclick=()=>{go("home"); renderHome();};
+
+function dominantGenres(){
+  const scores={};
+  state.profile.forEach(p=>{
+    const a=ALBUMS.find(x=>x.id===p.albumId);
+    scores[a.genero_principal]=(scores[a.genero_principal]||0)+p.rating;
+  });
+  return Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+}
+function safePool(){
+  const blocked=new Set(Object.keys(state.statuses));
+  const profileIds=new Set(state.profile.map(x=>x.albumId));
+  const poolAll=ALBUMS.filter(a=>!profileIds.has(a.id)&&!blocked.has(a.id));
+  const dom=dominantGenres().map(x=>x[0]);
+  const maxRating=state.profile.length?Math.max(...state.profile.map(x=>x.rating)):0;
+  const top=state.profile.filter(p=>p.rating>=maxRating-1);
+  const topGenres=new Set(top.map(p=>ALBUMS.find(a=>a.id===p.albumId).genero_principal));
+  let pool=poolAll.filter(a=>topGenres.has(a.genero_principal) || top.some(p=>{
+    const x=ALBUMS.find(z=>z.id===p.albumId);
+    return x.subgenero===a.subgenero || Math.abs(x.anio-a.anio)<=8;
+  }));
+  if(!pool.length) pool=poolAll.filter(a=>dom.includes(a.genero_principal));
+  return {poolAll, pool: pool.length?pool:poolAll};
+}
+// Three tiers, from tightest to widest: safe (very close), mid (shares a couple
+// of things but isn't your safest match), random (no genre logic at all).
+function candidates(mode){
+  const {poolAll, pool:safe}=safePool();
+  if(mode==="random") return poolAll;
+  if(mode==="safe") return safe;
+
+  // mid: excludes what's already in "safe", requires at least one point of
+  // contact (a shared genre anywhere in the profile, or a shared characteristic)
+  const safeIds=new Set(safe.map(a=>a.id));
+  const profileGenres=new Set(state.profile.map(p=>ALBUMS.find(a=>a.id===p.albumId).genero_principal));
+  const profileChars=new Set();
+  state.profile.forEach(p=>ALBUMS.find(a=>a.id===p.albumId).caracteristicas.forEach(c=>profileChars.add(c)));
+  let mid=poolAll.filter(a=>!safeIds.has(a.id) && (
+    profileGenres.has(a.genero_principal) || a.caracteristicas.some(c=>profileChars.has(c))
+  ));
+  if(!mid.length) mid=poolAll.filter(a=>!safeIds.has(a.id));
+  return mid.length?mid:poolAll;
+}
+function pick(mode){
+  const pool=candidates(mode);
+  if(!pool.length){toast("Ya no hay álbumes disponibles para esta categoría.");return null}
+  if(mode==="random") return pool[Math.floor(Math.random()*pool.length)];
+  // Weighted by acclaim: high > cult > medium, while retaining randomness.
+  const weights={alta:3,culto:2,media:1};
+  const total=pool.reduce((s,a)=>s+(weights[a.aclamacion]||1),0);
+  let r=Math.random()*total;
+  for(const a of pool){r-=weights[a.aclamacion]||1;if(r<=0)return a}
+  return pool[pool.length-1];
+}
+function spin(mode){
+  if($("wheel").classList.contains("spinning"))return;
+  state.currentMode=mode;
+  const finalAlbum=pick(mode);
+  if(!finalAlbum) return; // pick() already showed the toast
+
+  $("wheel").classList.add("spinning");
+  $("wheelTitle").textContent="Girando…";
+  $("wheelText").textContent="";
+  fetchCoverUrl(finalAlbum); // warm the cache so it's likely ready when we land
+
+  const reelPool=candidates(mode).length?candidates(mode):ALBUMS;
+  const steps=13;
+  const reel=[];
+  for(let i=0;i<steps-1;i++) reel.push(reelPool[Math.floor(Math.random()*reelPool.length)]);
+  reel.push(finalAlbum); // always land on the real pick
+
+  const mark=$("wheelMark");
+  let i=0;
+  (function step(){
+    cover(mark, reel[i]);
+    i++;
+    if(i<reel.length){
+      const delay=55+Math.pow(i/reel.length,2)*280; // decelerate toward the end
+      setTimeout(step, delay);
+    }else{
+      setTimeout(()=>{
+        $("wheel").classList.remove("spinning");
+        state.current=finalAlbum;
+        renderResult(finalAlbum,mode);
+        go("result");
+      },260);
+    }
+  })();
+}
+document.querySelectorAll(".mode").forEach(b=>b.onclick=()=>spin(b.dataset.mode));
+
+function sharedCharacteristic(a,base){
+  return base ? (a.caracteristicas.find(c=>base.caracteristicas.includes(c))||null) : null;
+}
+function characteristicPhrase(trait,base){
+  if(trait.includes("atmósfera")) return `Tiene una atmósfera similar a la de <b>${escapeHtml(base.titulo)}</b>.`;
+  if(trait.includes("producción")||trait.includes("sample")) return `Comparte estilo de producción y samples con <b>${escapeHtml(base.titulo)}</b>.`;
+  return `Comparte "${escapeHtml(trait)}" con <b>${escapeHtml(base.titulo)}</b>.`;
+}
+function reasonFor(a,mode){
+  const best=state.profile.slice().sort((x,y)=>y.rating-x.rating)[0];
+  const base=best?ALBUMS.find(x=>x.id===best.albumId):null;
+
+  if(mode==="safe"&&base){
+    const trait=sharedCharacteristic(a,base);
+    if(trait) return characteristicPhrase(trait,base)+" Es uno de tus álbumes mejor calificados.";
+    if(a.subgenero===base.subgenero)return `Comparte el subgénero <b>${escapeHtml(a.subgenero)}</b> con <b>${escapeHtml(base.titulo)}</b>, uno de tus álbumes mejor calificados.`;
+    if(a.genero_principal===base.genero_principal)return `Se mantiene cerca de tu gusto: comparte <b>${escapeHtml(a.genero_principal)}</b> con <b>${escapeHtml(base.titulo)}</b>.`;
+    return `Tiene una época cercana a <b>${escapeHtml(base.titulo)}</b> y conserva elementos compatibles con tu perfil.`;
+  }
+
+  if(mode==="mid"){
+    let ref=null, trait=null;
+    for(const p of state.profile){
+      const x=ALBUMS.find(z=>z.id===p.albumId);
+      const t=sharedCharacteristic(a,x);
+      if(t){ref=x;trait=t;break}
+    }
+    if(ref&&trait) return characteristicPhrase(trait,ref)+" Aunque se mueve en un terreno que no es del todo tu zona habitual.";
+    const refGenre=state.profile.map(p=>ALBUMS.find(z=>z.id===p.albumId)).find(x=>x.genero_principal===a.genero_principal);
+    if(refGenre) return `Comparte <b>${escapeHtml(a.genero_principal)}</b> con <b>${escapeHtml(refGenre.titulo)}</b>, pero explora un subgénero distinto al que sueles calificar alto.`;
+    return `Se conecta apenas con un par de cosas de tu perfil: un punto intermedio antes de salir por completo de tu zona.`;
+  }
+
+  return `Elegido completamente al azar de tu catálogo restante, sin filtro de género: <b>${escapeHtml(a.genero_principal)}</b>, ${escapeHtml(a.subgenero)}.`;
+}
+const MODE_BADGE={
+  safe:{cls:"green",label:"🎯 Categoría segura"},
+  mid:{cls:"amber",label:"🧭 Punto intermedio"},
+  random:{cls:"violet",label:"🎲 Aleatorio total"}
+};
+function renderResult(a,mode){
+  cover($("resultCover"),a);
+  const badge=MODE_BADGE[mode]||MODE_BADGE.safe;
+  $("resultBadge").className="badge "+badge.cls;
+  $("resultBadge").textContent=badge.label;
+  $("resultTitle").textContent=a.titulo;
+  $("resultArtist").textContent=a.artista;
+  $("resultDetails").textContent=`${a.anio} · ${a.genero_principal} · ${a.subgenero}`;
+  $("covLink").href=covUrl(a);
+  $("resultReason").innerHTML=reasonFor(a,mode);
+}
+function genrePercentages(){
+  const scores={}; let total=0;
+  state.profile.forEach(p=>{
+    const a=ALBUMS.find(x=>x.id===p.albumId);
+    scores[a.genero_principal]=(scores[a.genero_principal]||0)+p.rating;
+    total+=p.rating;
+  });
+  if(!total) return [];
+  return Object.entries(scores).sort((x,y)=>y[1]-x[1]).map(([g,w])=>[g,Math.round(w/total*100)]);
+}
+function renderGenreProfile(){
+  const box=$("genreProfile");
+  const pcts=genrePercentages();
+  if(!pcts.length){box.innerHTML="";return}
+  box.innerHTML=`<div class="eyebrow" style="margin-bottom:10px">Tu perfil</div>`+
+    pcts.map(([g,p])=>`<div class="genre-row"><span class="g-name">${escapeHtml(g)}</span><div class="bar-track"><div class="bar-fill" style="width:${p}%"></div></div><span class="pct">${p}%</span></div>`).join("");
+}
+function renderHome(){
+  $("ratedStat").textContent=Object.keys(state.ratings).length+" calificados";
+  $("seenStat").textContent=Object.keys(state.statuses).length+" descubiertos";
+  renderGenreProfile();
+  if(!$("wheel").classList.contains("spinning")){
+    $("wheelTitle").textContent="La ruleta está lista";
+    $("wheelText").textContent="Elige una categoría para descubrir.";
+    $("wheelMark").style.backgroundImage="";
+    $("wheelMark").style.background="#0d0d0f";
+    $("wheelMark").textContent="◎";
+  }
+  updateHeader();
+}
+$("backHome").onclick=()=>{go("home");renderHome()};
+$("againBtn").onclick=()=>spin(state.currentMode||"safe");
+
+let modalAlbum=null;
+$("heardBtn").onclick=()=>{
+  modalAlbum=state.current;
+  $("modalAlbum").textContent=`${modalAlbum.titulo} · ${modalAlbum.artista}`;
+  $("modalSlider").value=8; $("bigScore").textContent="8"; $("scoreModal").classList.add("open");
+};
+$("modalSlider").oninput=e=>$("bigScore").textContent=e.target.value;
+$("cancelScore").onclick=()=>{$("scoreModal").classList.remove("open");modalAlbum=null};
+$("confirmScore").onclick=()=>{
+  if(!modalAlbum)return;
+  const rating=+$("modalSlider").value;
+  state.ratings[modalAlbum.id]=rating;
+  state.statuses[modalAlbum.id]="heard";
+  $("scoreModal").classList.remove("open");
+  toast(`Guardado: ${rating}/10`);
+  setTimeout(()=>{go("home");renderHome()},350);
+};
+$("saveBtn").onclick=()=>{
+  if(!state.current)return;
+  state.statuses[state.current.id]="pending"; toast("Guardado para después");
+  setTimeout(()=>{go("home");renderHome()},350);
+};
+$("rejectBtn").onclick=()=>{
+  if(!state.current)return;
+  state.statuses[state.current.id]="discarded"; toast("Álbum excluido de futuros spins");
+  setTimeout(()=>{go("home");renderHome()},350);
+};
+
+renderOnboarding();
+</script>
+</div>
+</body>
+</html>
